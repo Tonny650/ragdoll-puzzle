@@ -1,0 +1,14 @@
+# Godot 4+
+.godot/
+/android/
+*.import.tmp
+export_presets.cfg
+*.translation
+
+# Blender backups
+*.blend1
+*.blend2
+
+# OS
+.DS_Store
+Thumbs.db
