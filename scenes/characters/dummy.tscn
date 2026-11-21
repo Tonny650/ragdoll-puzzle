@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ragdoll/ragdoll_character.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/characters/character_dummy.glb" id="2_visual"]
+
+[node name="Dummy" type="Node3D"]
+script = ExtResource("1_script")
+visual_scene = ExtResource("2_visual")
+player_controlled = false
