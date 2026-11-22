@@ -69,7 +69,8 @@ personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `
 - **Equilibrio**: torso y pelvis tienen un "músculo de equilibrio" que los mantiene verticales y orientados
   hacia donde mira la cámara, y un muelle vertical sostiene la pelvis a `stand_height` cuando hay suelo.
 - **Caminar**: fuerza horizontal en pelvis/torso hacia la velocidad deseada + ciclo de pasos procedural
-  (seno) en las piernas y balanceo de brazos.
+  (seno) en las piernas y balanceo de brazos. La fuerza nunca empuja contra paredes fijas (se detectan con
+  rayos a la altura de cadera y pecho), para que la fricción no deje al personaje pegado a un muro.
 - **Brazos independientes (HFF)**: cada botón levanta un brazo hacia la dirección de la cámara; si la mano toca
   un cuerpo se crea un `Generic6DOFJoint3D` (rótula) entre la mano y el objeto. La mano solo se cierra cuando el
   brazo ya apunta hacia la mira (así no se agarra a media pared mientras sube), y una compensación de gravedad
@@ -114,10 +115,13 @@ Los `.blend` resultantes quedan en `art_source/` (con `.gdignore` para que Godot
   arrastrar la caja, y soltar.
 - `tests/test_climb.tscn`: apuntar al borde de la repisa de 1,5 m, agarrarlo, mirar arriba, izarse, pasar el
   borde y quedar de pie arriba.
+- `tests/test_wall_release.tscn`: saltar contra el muro alto, agarrarse por debajo del borde, soltar las manos
+  sin soltar W y comprobar que cae al suelo (antes la fricción lo dejaba pegado a la pared).
 
 ```bash
 godot --headless res://tests/test_ragdoll.tscn
 godot --headless res://tests/test_climb.tscn
+godot --headless res://tests/test_wall_release.tscn
 ```
 
 Imprime líneas `ASSERT ok|fail <nombre>`.
