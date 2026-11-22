@@ -73,6 +73,13 @@ const HAND_OFFSET := Vector3(0.0, -0.18, 0.0)  # mano, en local del antebrazo
 @export var arm_reach_frequency := 24.0   ## rigidez de brazos al apuntar/agarrar
 @export var recover_time := 1.6           ## segundos en recuperar la fuerza tras un KO
 
+@export_group("Trepar")
+@export var climb_strength := 1.0         ## multiplicador de la fuerza para izarse
+@export var climb_min_pitch := 0.2        ## cuanto hay que mirar hacia arriba para trepar
+@export var climb_min_anchor_mass := 40.0 ## masa minima de un RigidBody para poder trepar por el
+@export var grab_aim_alignment := 0.85    ## cos del angulo brazo/apuntado para cerrar la mano
+@export var grab_blocked_time := 0.4      ## si el brazo no llega a apuntar en este tiempo, agarra igual
+
 @export_group("Combate")
 @export var knockout_speed := 7.5         ## velocidad relativa de impacto en la cabeza que noquea
 @export var knockout_duration := 3.0
@@ -107,6 +114,7 @@ var _own_rids: Array[RID] = []
 var _grab_joints: Array = [null, null]
 var _grab_targets: Array = [null, null]
 var _punch_timers := [0.0, 0.0]
+var _raise_time := [0.0, 0.0]
 var _next_punch_side := Side.RIGHT
 var _walk_phase := 0.0
 var _jump_cooldown := 0.0
@@ -115,6 +123,8 @@ var _ko_timer := 0.0
 var _ai_punch_cooldown := 1.0
 var _grab_shape := SphereShape3D.new()
 var _ai_target: RagdollCharacter
+var climbing := false             # colgado y trepando (lo lee la locomocion)
+var climb_anchor := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -257,6 +267,7 @@ func _physics_process(delta: float) -> void:
 	_apply_balance()
 	_apply_locomotion(delta)
 	_apply_pose(delta)
+	_apply_climb()
 	_update_grabs()
 
 	if get_pelvis().global_position.y < kill_height:
@@ -433,6 +444,9 @@ func _apply_locomotion(delta: float) -> void:
 	if move_input.length_squared() < 0.01 and not grounded:
 		force = Vector3.ZERO
 	force = force.limit_length(total_mass * 30.0)
+	if climbing:
+		# No apretarse contra la pared: la friccion impediria subir.
+		force *= 0.1
 	pelvis.apply_central_force(force * 0.5)
 	torso.apply_central_force(force * 0.5)
 
@@ -490,6 +504,16 @@ func _apply_pose(delta: float) -> void:
 			var t := Quaternion(Vector3.DOWN, pdir) * yaw_q
 			_pd_toward(upper, t, arm_reach_frequency * 1.6, 0.8, 500.0 * strength, torso, strength, 2.0)
 			_pd_toward(lower, t, arm_reach_frequency * 1.6, 0.8, 300.0 * strength, upper, strength)
+			_arm_gravity_compensation(side, strength)
+		elif want_grab[side] and _is_climb_anchor(side):
+			# Colgado de algo fijo: el brazo se alinea con el agarre en vez de
+			# apuntar a la camara, para no empujar el cuerpo hacia abajo.
+			var shoulder := upper.global_transform * Vector3(0.0, 0.16, 0.0)
+			var to_hand := (_grab_joints[side] as Node3D).global_position - shoulder
+			if to_hand.length_squared() > 1e-4:
+				var t := Quaternion(Vector3.DOWN, to_hand.normalized()) * yaw_q
+				_pd_toward(upper, t, arm_reach_frequency * 0.6, 1.0, 140.0 * strength, torso, strength, 2.0)
+				_pd_toward(lower, t, arm_reach_frequency * 0.6, 1.0, 100.0 * strength, upper, strength)
 		elif want_grab[side]:
 			# Brazo extendido hacia donde mira la camara (HFF)
 			var dir := (aim_dir + Vector3(sgn * 0.12, 0, 0).rotated(Vector3.UP, facing_yaw)).normalized()
@@ -498,6 +522,7 @@ func _apply_pose(delta: float) -> void:
 			var max_t := (420.0 if holding else 260.0) * strength
 			_pd_toward(upper, t, arm_reach_frequency, 1.0, max_t, torso, strength, 2.0)
 			_pd_toward(lower, t, arm_reach_frequency, 1.0, max_t * 0.7, upper, strength)
+			_arm_gravity_compensation(side, strength)
 		else:
 			# Brazos relajados, balanceo al caminar
 			var swing := -sin(_walk_phase + (0.0 if side == Side.LEFT else PI)) * amp * 0.7
@@ -506,19 +531,77 @@ func _apply_pose(delta: float) -> void:
 			var lt := upper.global_basis.get_rotation_quaternion() * Quaternion(Vector3.RIGHT, 0.25)
 			_pd_toward(lower, lt, limb_frequency * 0.6, 1.0, 30.0 * strength, upper, strength * 0.6)
 
-	# Trepar: agarrado y mirando hacia arriba -> los brazos tiran del cuerpo
-	var holds := 0
-	var hold_y := 0.0
-	for side in 2:
-		if _grab_joints[side] != null and want_grab[side]:
-			holds += 1
-			hold_y += get_hand_position(side).y
-	if holds > 0 and aim_pitch > 0.35:
-		hold_y /= holds
-		var lift := clampf((hold_y - torso.global_position.y + 0.1) * 3.0, 0.0, 1.0)
-		var f := total_mass * 9.8 * (0.55 + 0.35 * holds) * lift * strength
-		torso.apply_central_force(Vector3.UP * f)
 
+# =============================================================================
+# Trepar (estilo HFF)
+# =============================================================================
+## Agarrado a algo fijo + mirando hacia arriba: los brazos izan el cuerpo.
+## Si ademas se empuja hacia delante, el pecho sube por encima del agarre y el
+## cuerpo se desplaza sobre el borde ("mantle"). Soltar al estar arriba.
+func _apply_climb() -> void:
+	var holds := 0
+	var anchor := Vector3.ZERO
+	for side in 2:
+		if want_grab[side] and _is_climb_anchor(side):
+			holds += 1
+			anchor += (_grab_joints[side] as Node3D).global_position
+	if holds == 0 or strength < 0.3 or aim_pitch < climb_min_pitch:
+		climbing = false
+		return
+	anchor /= holds
+	climbing = true
+	climb_anchor = anchor
+	var torso := get_torso()
+	var pelvis := get_pelvis()
+	var fwd := Vector3(0, 0, -1).rotated(Vector3.UP, facing_yaw)
+	var pushing := move_input.dot(fwd) > 0.3
+	var target_y := anchor.y + (0.95 if pushing else 0.35)
+	var vy := (torso.linear_velocity.y + pelvis.linear_velocity.y) * 0.5
+	var accel := 9.8 + (target_y - torso.global_position.y) * 25.0 - vy * 8.0
+	var hands := 0.6 + 0.2 * holds   # una mano iza menos que dos
+	var lift := clampf(accel, 0.0, 9.8 * 2.2) * total_mass * strength * hands * climb_strength
+	torso.apply_central_force(Vector3.UP * lift * 0.6)
+	pelvis.apply_central_force(Vector3.UP * lift * 0.4)
+	if pushing:
+		var above := torso.global_position.y - anchor.y
+		if above > 0.1:
+			var f := fwd * total_mass * 12.0 * clampf(above * 2.0, 0.0, 1.0) * strength
+			torso.apply_central_force(f * 0.5)
+			pelvis.apply_central_force(f * 0.5)
+
+
+## Solo se trepa por cosas fijas o muy pesadas (no por una caja que llevas).
+func _is_climb_anchor(side: int) -> bool:
+	if _grab_joints[side] == null:
+		return false
+	var target = _grab_targets[side]
+	if not is_instance_valid(target):
+		return false
+	if target is StaticBody3D:  # incluye AnimatableBody3D (puertas, plataformas)
+		return true
+	return target is RigidBody3D and (target as RigidBody3D).mass >= climb_min_anchor_mass
+
+
+## Torque que anula el peso del brazo (hombro y codo) para que el PD solo tenga
+## que corregir la direccion: sin esto el brazo extendido se cuelga ~30 grados.
+func _arm_gravity_compensation(side: int, gain: float) -> void:
+	if gain <= 0.0:
+		return
+	var upper: RigidBody3D = get_upper_arm(side)
+	var lower := get_lower_arm(side)
+	var torso := get_torso()
+	var lift := Vector3.UP * 9.8
+	var shoulder := upper.global_transform * Vector3(0.0, 0.16, 0.0)
+	var elbow := upper.global_transform * Vector3(0.0, -0.17, 0.0)
+	# codo: sostiene el antebrazo
+	var t_elbow := (lower.global_position - elbow).cross(lift * lower.mass) * gain
+	lower.apply_torque(t_elbow)
+	upper.apply_torque(-t_elbow)
+	# hombro: sostiene brazo + antebrazo
+	var t_shoulder := ((upper.global_position - shoulder).cross(lift * upper.mass)
+		+ (lower.global_position - shoulder).cross(lift * lower.mass)) * gain
+	upper.apply_torque(t_shoulder)
+	torso.apply_torque(-t_shoulder)
 
 ## Torque PD que lleva `body` hacia la orientacion mundial `target`.
 ## Si `counter` no es null aplica el torque opuesto al padre (accion-reaccion).
@@ -557,11 +640,19 @@ func _update_grabs() -> void:
 	for side in 2:
 		var want: bool = want_grab[side] and strength > 0.3
 		if not want:
+			_raise_time[side] = 0.0
 			release(side)
 			continue
 		if _grab_joints[side] != null:
 			if not is_instance_valid(_grab_targets[side]):
 				release(side)
+			continue
+		# La mano solo se cierra cuando el brazo ya apunta hacia donde se mira
+		# (o lleva un rato levantado y algo lo bloquea). Asi no se agarra a
+		# media pared mientras el brazo aun esta subiendo.
+		_raise_time[side] += get_physics_process_delta_time()
+		var arm_dir := -get_lower_arm(side).global_basis.y
+		if arm_dir.dot(get_aim_direction()) < grab_aim_alignment and _raise_time[side] < grab_blocked_time:
 			continue
 		var hand := get_hand_position(side)
 		var params := PhysicsShapeQueryParameters3D.new()
@@ -654,12 +745,20 @@ func get_head() -> RigidBody3D:
 	return bodies.head
 
 
+func get_upper_arm(side: int) -> RigidBody3D:
+	return bodies["upper_arm_l" if side == Side.LEFT else "upper_arm_r"]
+
+
 func get_lower_arm(side: int) -> RigidBody3D:
 	return bodies["lower_arm_l" if side == Side.LEFT else "lower_arm_r"]
 
 
 func get_hand_position(side: int) -> Vector3:
 	return get_lower_arm(side).global_transform * HAND_OFFSET
+
+
+func get_aim_direction() -> Vector3:
+	return (Quaternion(Vector3.UP, facing_yaw) * Quaternion(Vector3.RIGHT, aim_pitch)) * Vector3.FORWARD
 
 
 func get_center() -> Vector3:

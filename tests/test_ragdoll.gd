@@ -34,7 +34,13 @@ func _ready() -> void:
 		[14.0, func(): Input.action_press("grab_left"); Input.action_press("grab_right")],
 		[15.0, func():
 			var hl := player.get_hand_position(0)
-			_assert("arms_raise", hl.y > player.get_center().y - 0.1, "hand_y=%.2f torso_y=%.2f" % [hl.y, player.get_center().y])
+			var hr := player.get_hand_position(1)
+			var aim := player.get_aim_direction()
+			_assert("arms_raise", hl.y > player.get_center().y - 0.1 and hr.y > player.get_center().y - 0.1,
+				"handL_y=%.2f handR_y=%.2f torso_y=%.2f aim_pitch=%.2f dotL=%.2f dotR=%.2f grabL=%s grabR=%s" % [
+				hl.y, hr.y, player.get_center().y, player.aim_pitch,
+				(-player.get_lower_arm(0).global_basis.y).dot(aim), (-player.get_lower_arm(1).global_basis.y).dot(aim),
+				player.get_grabbed(0), player.get_grabbed(1)])
 			Input.action_release("grab_left"); Input.action_release("grab_right")],
 		[17.0, _check_standing.bind("stand_final")],
 		# --- agarrar y arrastrar la caja pesada ---
