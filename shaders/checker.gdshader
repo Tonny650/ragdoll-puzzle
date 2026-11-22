@@ -21,12 +21,15 @@ float checker(vec2 p) {
 }
 
 float grid(vec2 p) {
-	vec2 g = abs(fract(p / cell_size - 0.5) - 0.5) / fwidth(p / cell_size);
+	// fwidth puede valer 0 en algunos pixeles: sin el max() se dividia 0/0 = NaN,
+	// el pixel salia negro y el glow lo extendia como bloques negros.
+	vec2 w = max(fwidth(p / cell_size), vec2(1e-4));
+	vec2 g = abs(fract(p / cell_size - 0.5) - 0.5) / w;
 	return 1.0 - clamp(min(g.x, g.y), 0.0, 1.0);
 }
 
 void fragment() {
-	vec3 n = abs(world_normal);
+	vec3 n = abs(normalize(world_normal));
 	vec2 uv = n.y > 0.5 ? world_pos.xz : (n.x > n.z ? world_pos.zy : world_pos.xy);
 	vec3 col = mix(color_a.rgb, color_b.rgb, checker(uv));
 	col = mix(col, line_color.rgb, grid(uv) * 0.6);

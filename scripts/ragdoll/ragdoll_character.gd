@@ -352,7 +352,7 @@ func is_knocked_out() -> bool:
 
 
 func _on_head_hit(other: Node) -> void:
-	if other is RigidBody3D and other.get_meta("ragdoll_owner", null) == self:
+	if other.has_meta("ragdoll_owner") and other.get_meta("ragdoll_owner") == self:
 		return
 	var other_vel := Vector3.ZERO
 	if other is RigidBody3D:
