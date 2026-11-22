@@ -9,6 +9,7 @@ var t := 0.0
 var _steps: Array = []
 var _mark := Vector3.ZERO
 var _done := false
+var _arm_dots := [[], []]
 
 
 func _ready() -> void:
@@ -33,14 +34,12 @@ func _ready() -> void:
 		[14.0, _check_standing.bind("recover_after_ko")],
 		[14.0, func(): Input.action_press("grab_left"); Input.action_press("grab_right")],
 		[15.0, func():
-			var hl := player.get_hand_position(0)
-			var hr := player.get_hand_position(1)
-			var aim := player.get_aim_direction()
-			_assert("arms_raise", hl.y > player.get_center().y - 0.1 and hr.y > player.get_center().y - 0.1,
-				"handL_y=%.2f handR_y=%.2f torso_y=%.2f aim_pitch=%.2f dotL=%.2f dotR=%.2f grabL=%s grabR=%s" % [
-				hl.y, hr.y, player.get_center().y, player.aim_pitch,
-				(-player.get_lower_arm(0).global_basis.y).dot(aim), (-player.get_lower_arm(1).global_basis.y).dot(aim),
-				player.get_grabbed(0), player.get_grabbed(1)])
+			# brazos apuntando a la mira: promedio de cos(angulo) en los ultimos 0,4 s
+			var avg_l := _avg(_arm_dots[0])
+			var avg_r := _avg(_arm_dots[1])
+			_assert("arms_raise", avg_l > 0.9 and avg_r > 0.9,
+				"avg_dotL=%.2f avg_dotR=%.2f min_dotL=%.2f min_dotR=%.2f" % [
+				avg_l, avg_r, _arm_dots[0].min(), _arm_dots[1].min()])
 			Input.action_release("grab_left"); Input.action_release("grab_right")],
 		[17.0, _check_standing.bind("stand_final")],
 		# --- agarrar y arrastrar la caja pesada ---
@@ -70,10 +69,24 @@ func _physics_process(delta: float) -> void:
 		var c := player.get_center()
 		print("METRIC t=%.1f pos=(%.2f, %.2f, %.2f) up=%.2f grounded=%s strength=%.2f" % [
 			t, c.x, c.y, c.z, player.get_torso().global_basis.y.dot(Vector3.UP), player.grounded, player.strength])
+	if t > 14.6 and t < 15.0:
+		# muestras para la prueba arms_raise (promedio, no un solo fotograma)
+		var aim := player.get_aim_direction()
+		for side in 2:
+			_arm_dots[side].append((-player.get_lower_arm(side).global_basis.y).dot(aim))
 	while not _steps.is_empty() and t >= _steps[0][0]:
 		(_steps.pop_front()[1] as Callable).call()
 	if _done:
 		get_tree().quit()
+
+
+func _avg(values: Array) -> float:
+	if values.is_empty():
+		return 0.0
+	var total := 0.0
+	for v in values:
+		total += v
+	return total / values.size()
 
 
 func _check_standing(name: String) -> void:

@@ -19,7 +19,7 @@ con personajes modelados por script en **Blender**.
 | Mirar / apuntar brazos | Ratón | Stick der. |
 | Saltar | Espacio | A |
 | Brazo izq. / der. (mantener = agarrar) | Clic izq. / der. | LT / RT |
-| Trepar | Levantar brazos mirando arriba, caminar al muro, mantener agarrado + W; soltar arriba | |
+| Trepar | Apunta al borde y agarra, luego mira arriba + W; suelta al estar arriba | |
 | Puñetazo | F | X |
 | Dejarse caer (flácido) | Q | B |
 | Reaparecer | R | Back |
@@ -40,7 +40,11 @@ con personajes modelados por script en **Blender**.
   brazo ya apunta hacia la mira (así no se agarra a media pared mientras sube), y una compensación de gravedad
   evita que los brazos extendidos se cuelguen.
 - **Trepar**: agarrado a algo fijo (o muy pesado) y mirando arriba, los brazos izan el cuerpo; empujando hacia
-  delante el pecho pasa por encima del borde. Ajustable con `climb_strength`, `climb_min_pitch`.
+  delante el torso se dobla sobre el borde y la cadera pasa por encima. Ajustable con `climb_strength`,
+  `climb_min_pitch`, `climb_min_anchor_mass`.
+- **Estabilidad**: toda amortiguación muscular se limita para no frenar más del 70 % del giro en un paso de
+  física (35 % sobre el cuerpo padre). Sin ese límite, piezas de poca inercia (giro vertical de pelvis/torso)
+  temblaban a 15–20 rad/s.
 - **Combate (Gang Beasts)**: puñetazo con impulso; un golpe fuerte en la cabeza (`knockout_speed`) deja KO
   durante `knockout_duration`: fuerza muscular = 0 → ragdoll flácido, y luego se levanta solo.
 - **NPC**: el mismo script con `player_controlled = false`. Con `ai_target_path` persigue y golpea al objetivo.
@@ -72,9 +76,11 @@ Los `.blend` resultantes quedan en `art_source/` (con `.gdignore` para que Godot
 
 ## Pruebas automáticas
 
-- `tests/test_ragdoll.tscn`: estar de pie, caminar, saltar, KO + recuperación, levantar brazos, agarrar y
+- `tests/test_ragdoll.tscn`: estar de pie, caminar, saltar, KO + recuperación, levantar brazos (alineación
+  promedio con la mira), agarrar y
   arrastrar la caja, y soltar.
-- `tests/test_climb.tscn`: levantar brazos, agarrar el borde de la repisa de 1,5 m, izarse y quedar de pie arriba.
+- `tests/test_climb.tscn`: apuntar al borde de la repisa de 1,5 m, agarrarlo, mirar arriba, izarse, pasar el
+  borde y quedar de pie arriba.
 
 ```bash
 godot --headless res://tests/test_ragdoll.tscn

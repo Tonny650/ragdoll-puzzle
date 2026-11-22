@@ -22,13 +22,15 @@ func _ready() -> void:
 	player._spawn_xform = Transform3D(Basis.IDENTITY, Vector3(0, 0.05, -7.3))
 	player.respawn()
 	_steps = [
-		# 1) levantar los brazos mirando arriba ANTES de llegar al muro
+		# 1) levantar los brazos apuntando al borde ANTES de llegar al muro
 		[1.0, func():
-			cam.pitch = 0.55
+			cam.pitch = 0.1
 			Input.action_press("grab_left")
 			Input.action_press("grab_right")],
-		# 2) caminar hacia el muro: las manos pasan por encima del borde y lo agarran
+		# 2) caminar hacia el muro: las manos llegan al borde y lo agarran
 		[1.6, func(): Input.action_press("move_forward")],
+		# 3) ya agarrado, mirar hacia arriba para izarse
+		[2.6, func(): cam.pitch = 0.6],
 		[3.5, func():
 			_assert("grab_ledge", player.is_grabbing(0) or player.is_grabbing(1),
 				"L=%s R=%s" % [player.is_grabbing(0), player.is_grabbing(1)])],

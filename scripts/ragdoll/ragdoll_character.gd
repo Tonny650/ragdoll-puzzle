@@ -70,7 +70,8 @@ const HAND_OFFSET := Vector3(0.0, -0.18, 0.0)  # mano, en local del antebrazo
 @export var upright_stiffness := 1600.0   ## Nm/rad para mantener el torso vertical
 @export var upright_damping := 160.0
 @export var limb_frequency := 16.0        ## rigidez de piernas/brazos (rad/s)
-@export var arm_reach_frequency := 24.0   ## rigidez de brazos al apuntar/agarrar
+@export var arm_reach_frequency := 20.0   ## rigidez de brazos al apuntar/agarrar
+@export var arm_damping_ratio := 1.5      ## >1 = sin rebote; evita que el brazo tiemble al apuntar
 @export var recover_time := 1.6           ## segundos en recuperar la fuerza tras un KO
 
 @export_group("Trepar")
@@ -409,7 +410,11 @@ func _apply_balance() -> void:
 		return
 	var yaw_q := Quaternion(Vector3.UP, facing_yaw)
 	var lean := 0.0
-	if want_grab[0] or want_grab[1]:
+	if climbing:
+		# Colgado: doblarse hacia delante sobre el borde al empujar (negativo = adelante).
+		var fwd := Vector3(0, 0, -1).rotated(Vector3.UP, facing_yaw)
+		lean = -0.75 if move_input.dot(fwd) > 0.3 else 0.0
+	elif want_grab[0] or want_grab[1]:
 		lean = clampf(aim_pitch, -0.9, 0.5) * 0.35
 	lean -= move_input.length() * 0.08
 	var torso_target := yaw_q * Quaternion(Vector3.RIGHT, lean)
@@ -424,8 +429,39 @@ func _apply_balance() -> void:
 
 func _upright_torque(body: RigidBody3D, target: Quaternion, k: float, d: float, max_torque: float) -> void:
 	var err := _rotation_error(body.global_basis.get_rotation_quaternion(), target)
-	var torque := (err * k - body.angular_velocity * d).limit_length(max_torque)
+	var w := body.angular_velocity
+	var damp := w * d * _stable_damping_scale(body, w, d)
+	var torque := (err * k - damp).limit_length(max_torque)
 	body.apply_torque(torque)
+
+
+## Factor (0..1) que limita una amortiguacion explicita `-d*w` para que en un
+## paso de fisica no frene mas del 70 % de la velocidad. Sin esto, en piezas de
+## poca inercia (giro vertical del torso/pelvis) la amortiguacion se pasaba de
+## largo cada paso e invertia el giro: temblor permanente de 15-20 rad/s.
+func _stable_damping_scale(body: RigidBody3D, w: Vector3, d: float) -> float:
+	return _damping_scale(body, w, w * d, 0.7)
+
+
+## Igual para un torque de amortiguacion ya calculado: cuanto frenaria a `body`
+## en un paso, como fraccion de `w`. Devuelve el factor para no pasar de `max_frac`.
+func _damping_scale(body: RigidBody3D, w: Vector3, damp_torque: Vector3, max_frac: float) -> float:
+	var w2 := w.length_squared()
+	if w2 < 1e-8:
+		return 1.0
+	var dt := get_physics_process_delta_time()
+	var decel := (body.get_inverse_inertia_tensor() * damp_torque).dot(w) / w2 * dt
+	return minf(1.0, max_frac / decel) if decel > 0.0 else 1.0
+
+
+## Limite de amortiguacion de los musculos de las extremidades. La reaccion cae
+## sobre el padre (p. ej. ambas piernas sobre la pelvis), asi que alli se limita
+## a un 35 % por musculo para que la suma de varios siga siendo estable.
+func _pd_damping_scale(body: RigidBody3D, counter: RigidBody3D, rel_w: Vector3, d_t: Vector3) -> float:
+	var k := _damping_scale(body, rel_w, d_t, 0.7)
+	if counter:
+		k = minf(k, _damping_scale(counter, rel_w, d_t, 0.35))
+	return k
 
 
 # =============================================================================
@@ -477,7 +513,11 @@ func _apply_pose(delta: float) -> void:
 		var ph := _walk_phase + (0.0 if side == Side.LEFT else PI)
 		var thigh_pitch := sin(ph) * amp
 		var knee := -maxf(0.0, cos(ph)) * amp * 1.3 - 0.05
-		if not grounded and _no_support_timer > 0.15:
+		if climbing:
+			# trepando: rodillas arriba para subirlas al borde (no engancharse en la pared)
+			thigh_pitch = 0.7 if side == Side.LEFT else 0.5
+			knee = -1.0
+		elif not grounded and _no_support_timer > 0.15:
 			# en el aire: piernas algo recogidas
 			thigh_pitch = 0.35 if side == Side.LEFT else 0.15
 			knee = -0.6
@@ -501,9 +541,8 @@ func _apply_pose(delta: float) -> void:
 		if _punch_timers[side] > 0.0:
 			# Puñetazo: brazo recto y muy rigido hacia delante
 			var pdir := (yaw_q * Quaternion(Vector3.RIGHT, clampf(aim_pitch, -0.3, 0.4))) * Vector3.FORWARD
-			var t := Quaternion(Vector3.DOWN, pdir) * yaw_q
-			_pd_toward(upper, t, arm_reach_frequency * 1.6, 0.8, 500.0 * strength, torso, strength, 2.0)
-			_pd_toward(lower, t, arm_reach_frequency * 1.6, 0.8, 300.0 * strength, upper, strength)
+			_pd_aim(upper, pdir, arm_reach_frequency * 1.6, 0.8, 500.0 * strength, torso, strength, 2.0)
+			_pd_aim(lower, pdir, arm_reach_frequency * 1.6, 0.8, 300.0 * strength, null, strength)
 			_arm_gravity_compensation(side, strength)
 		elif want_grab[side] and _is_climb_anchor(side):
 			# Colgado de algo fijo: el brazo se alinea con el agarre en vez de
@@ -511,17 +550,16 @@ func _apply_pose(delta: float) -> void:
 			var shoulder := upper.global_transform * Vector3(0.0, 0.16, 0.0)
 			var to_hand := (_grab_joints[side] as Node3D).global_position - shoulder
 			if to_hand.length_squared() > 1e-4:
-				var t := Quaternion(Vector3.DOWN, to_hand.normalized()) * yaw_q
-				_pd_toward(upper, t, arm_reach_frequency * 0.6, 1.0, 140.0 * strength, torso, strength, 2.0)
-				_pd_toward(lower, t, arm_reach_frequency * 0.6, 1.0, 100.0 * strength, upper, strength)
+				var hdir := to_hand.normalized()
+				_pd_aim(upper, hdir, arm_reach_frequency * 0.6, 1.0, 140.0 * strength, torso, strength, 2.0)
+				_pd_aim(lower, hdir, arm_reach_frequency * 0.6, 1.0, 100.0 * strength, null, strength)
 		elif want_grab[side]:
 			# Brazo extendido hacia donde mira la camara (HFF)
 			var dir := (aim_dir + Vector3(sgn * 0.12, 0, 0).rotated(Vector3.UP, facing_yaw)).normalized()
-			var t := Quaternion(Vector3.DOWN, dir) * yaw_q
 			var holding := _grab_joints[side] != null
 			var max_t := (420.0 if holding else 260.0) * strength
-			_pd_toward(upper, t, arm_reach_frequency, 1.0, max_t, torso, strength, 2.0)
-			_pd_toward(lower, t, arm_reach_frequency, 1.0, max_t * 0.7, upper, strength)
+			_pd_aim(upper, dir, arm_reach_frequency, arm_damping_ratio, max_t, torso, strength, 2.0)
+			_pd_aim(lower, dir, arm_reach_frequency, arm_damping_ratio, max_t * 0.7, null, strength)
 			_arm_gravity_compensation(side, strength)
 		else:
 			# Brazos relajados, balanceo al caminar
@@ -565,9 +603,15 @@ func _apply_climb() -> void:
 	if pushing:
 		var above := torso.global_position.y - anchor.y
 		if above > 0.1:
-			var f := fwd * total_mass * 12.0 * clampf(above * 2.0, 0.0, 1.0) * strength
-			torso.apply_central_force(f * 0.5)
-			pelvis.apply_central_force(f * 0.5)
+			# Pasar el borde: empujar sobre todo la cadera hacia delante...
+			var mantle := clampf(above * 2.0, 0.0, 1.0) * strength
+			var f := fwd * total_mass * 18.0 * mantle
+			torso.apply_central_force(f * 0.4)
+			pelvis.apply_central_force(f * 0.6)
+			# ...y subirla por encima de la arista para que no se enganche en ella.
+			var hip_err := (anchor.y + 0.3) - pelvis.global_position.y
+			if hip_err > 0.0:
+				pelvis.apply_central_force(Vector3.UP * total_mass * minf(hip_err * 40.0, 12.0) * mantle)
 
 
 ## Solo se trepa por cosas fijas o muy pesadas (no por una caja que llevas).
@@ -603,6 +647,39 @@ func _arm_gravity_compensation(side: int, gain: float) -> void:
 	upper.apply_torque(t_shoulder)
 	torso.apply_torque(-t_shoulder)
 
+## Como _pd_toward pero solo para la DIRECCION de un hueso (su -Y local hacia
+## `target_dir`). No controla la torsion sobre su propio eje: la inercia en ese
+## eje es diminuta y controlarla hacia oscilar el antebrazo a 20+ rad/s.
+func _pd_aim(body: RigidBody3D, target_dir: Vector3, freq: float, ratio: float,
+		max_torque: float, counter: RigidBody3D = null, gain: float = 1.0, inertia_scale: float = 1.0) -> void:
+	if gain <= 0.0 or max_torque <= 0.0:
+		return
+	var cur := -body.global_basis.y
+	var axis := cur.cross(target_dir)
+	var s := axis.length()
+	var angle := atan2(s, cur.dot(target_dir))
+	var err := Vector3.ZERO
+	if s > 1e-6:
+		err = axis / s * angle
+	elif cur.dot(target_dir) < 0.0:
+		# exactamente opuesto: girar sobre cualquier eje perpendicular
+		err = body.global_basis.x * PI
+	var rel_w := body.angular_velocity
+	if counter:
+		rel_w -= counter.angular_velocity
+	rel_w -= cur * rel_w.dot(cur)  # amortiguar solo el balanceo, no la torsion
+	var inertia := body.get_inverse_inertia_tensor().inverse() * inertia_scale
+	var p_t := inertia * (err * freq * freq * gain)
+	var d_t := inertia * (rel_w * 2.0 * ratio * freq * sqrt(gain))
+	d_t *= _pd_damping_scale(body, counter, rel_w, d_t)
+	var torque := p_t - d_t
+	torque -= cur * torque.dot(cur)  # sin componente de torsion
+	torque = torque.limit_length(max_torque)
+	body.apply_torque(torque)
+	if counter:
+		counter.apply_torque(-torque)
+
+
 ## Torque PD que lleva `body` hacia la orientacion mundial `target`.
 ## Si `counter` no es null aplica el torque opuesto al padre (accion-reaccion).
 func _pd_toward(body: RigidBody3D, target: Quaternion, freq: float, ratio: float,
@@ -613,9 +690,11 @@ func _pd_toward(body: RigidBody3D, target: Quaternion, freq: float, ratio: float
 	var rel_w := body.angular_velocity
 	if counter:
 		rel_w -= counter.angular_velocity
-	var accel := err * freq * freq * gain - rel_w * 2.0 * ratio * freq * sqrt(gain)
-	var inertia := body.get_inverse_inertia_tensor().inverse()
-	var torque := (inertia * accel * inertia_scale).limit_length(max_torque)
+	var inertia := body.get_inverse_inertia_tensor().inverse() * inertia_scale
+	var p_t := inertia * (err * freq * freq * gain)
+	var d_t := inertia * (rel_w * 2.0 * ratio * freq * sqrt(gain))
+	d_t *= _pd_damping_scale(body, counter, rel_w, d_t)
+	var torque := (p_t - d_t).limit_length(max_torque)
 	body.apply_torque(torque)
 	if counter:
 		counter.apply_torque(-torque)
