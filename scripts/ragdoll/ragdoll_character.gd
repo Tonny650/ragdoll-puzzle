@@ -67,7 +67,11 @@ var _spawn_xform := Transform3D.IDENTITY
 var _rest_local := {}            # nombre -> Transform3D en espacio del personaje
 
 
+const GROUP := &"ragdoll_characters"
+
+
 func _ready() -> void:
+	add_to_group(GROUP)
 	_spawn_xform = global_transform
 	facing_yaw = global_rotation.y
 	if body == null:

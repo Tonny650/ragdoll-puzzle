@@ -5,6 +5,8 @@ extends CharacterAbility
 
 @export var target_path: NodePath          ## personaje al que perseguir y golpear
 @export var aggro_radius := 7.0
+@export var punch_distance := 0.7          ## se acerca hasta esta distancia y pega (alcance del brazo ~0,7 m)
+@export var punch_cooldown := Vector2(0.5, 1.1)   ## segundos entre golpes (min, max)
 
 var target: RagdollCharacter
 var _punch_cooldown := 1.0
@@ -31,8 +33,8 @@ func physics_step(delta: float) -> void:
 		return
 	c.facing_yaw = atan2(-to_target.x, -to_target.z)
 	c.aim_pitch = 0.1
-	if dist > 1.1:
+	if dist > punch_distance:
 		c.move_input = to_target / dist * 0.7
 	elif _punch_cooldown <= 0.0:
 		c.want_punch = true
-		_punch_cooldown = randf_range(0.8, 1.6)
+		_punch_cooldown = randf_range(punch_cooldown.x, punch_cooldown.y)

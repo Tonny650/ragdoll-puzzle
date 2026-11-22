@@ -83,9 +83,14 @@ personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `
 - **Estabilidad**: toda amortiguación muscular se limita para no frenar más del 70 % del giro en un paso de
   física (35 % sobre el cuerpo padre). Sin ese límite, piezas de poca inercia (giro vertical de pelvis/torso)
   temblaban a 15–20 rad/s.
-- **Combate (Gang Beasts)**: puñetazo con impulso; un golpe fuerte en la cabeza (`knockout_speed`) deja KO
-  durante `knockout_duration`: fuerza muscular = 0 → ragdoll flácido, y luego se levanta solo.
-- **NPC**: el mismo núcleo con `AIBrain` en vez de `PlayerInput`. Con `target_path` persigue y golpea al objetivo.
+- **Combate (Gang Beasts)**: puñetazo con impulso. Si hay un rival a tiro delante (`aim_assist_range`,
+  `aim_assist_angle`), el puño apunta a su cabeza y el torso se lanza un poco hacia él (`punch_lunge`).
+  Cada puñetazo en la cabeza suma daño según su velocidad y empuja la cabeza; con `knockout_damage` acumulado
+  cae KO (el daño se cura con `damage_recovery`). Un impacto muy fuerte en la cabeza (`knockout_speed`) noquea
+  de golpe. KO = fuerza muscular 0 durante `knockout_duration` → ragdoll flácido, y luego se levanta solo, con
+  `recover_grace` segundos en los que no puede volver a caer KO. Unos 3–4 puñetazos seguidos noquean.
+- **NPC**: el mismo núcleo con `AIBrain` en vez de `PlayerInput`. Con `target_path` persigue al objetivo hasta
+  `punch_distance` y le golpea cada `punch_cooldown` segundos.
 
 ## Escenario de pruebas (`scenes/levels/test_arena.tscn`)
 
@@ -121,12 +126,15 @@ Los `.blend` resultantes quedan en `art_source/` (con `.gdignore` para que Godot
   sin soltar W y comprobar que cae al suelo (antes la fricción lo dejaba pegado a la pared).
 - `tests/test_mantle_release.tscn`: soltar manos y W justo al cruzar el borde y comprobar que acaba de pie
   arriba con los dos pies apoyados.
+- `tests/test_combat.tscn`: noquear a DummyIdle a puñetazos, KO flácido y recuperación, dejarse caer con Q,
+  la IA de sparring noquea al jugador y el periodo de gracia tras levantarse.
 
 ```bash
 godot --headless res://tests/test_ragdoll.tscn
 godot --headless res://tests/test_climb.tscn
 godot --headless res://tests/test_wall_release.tscn
 godot --headless res://tests/test_mantle_release.tscn
+godot --headless res://tests/test_combat.tscn
 ```
 
 Imprime líneas `ASSERT ok|fail <nombre>`.
