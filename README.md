@@ -83,7 +83,10 @@ personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `
 - **Estabilidad**: toda amortiguación muscular se limita para no frenar más del 70 % del giro en un paso de
   física (35 % sobre el cuerpo padre). Sin ese límite, piezas de poca inercia (giro vertical de pelvis/torso)
   temblaban a 15–20 rad/s.
-- **Combate (Gang Beasts)**: puñetazo con impulso. Si hay un rival a tiro delante (`aim_assist_range`,
+- **Combate (Gang Beasts)**: puñetazo de boxeo en tres fases: carga (puño a la guardia, hombro atrás),
+  golpe recto con el brazo estirado y giro del torso, y vuelta a la guardia (el brazo se frena en seco,
+  `arm_brake`). Tras golpear los dos puños quedan en guardia `guard_time` s, así los golpes seguidos
+  (alternando brazo) parecen una combinación. Solo la fase de golpe hace daño. Si hay un rival a tiro delante (`aim_assist_range`,
   `aim_assist_angle`), el puño apunta a su cabeza y el torso se lanza un poco hacia él (`punch_lunge`).
   Cada puñetazo en la cabeza suma `punch_damage`, echa la cabeza y el torso hacia atrás (`punch_knockback`) y
   afloja los músculos un instante (`stagger_time`, `stagger_strength`) para que se tambalee. Con
