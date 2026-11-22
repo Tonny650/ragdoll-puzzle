@@ -839,8 +839,10 @@ text = "¡Puzle resuelto!"
 [node name="DummySparring" parent="." instance=ExtResource("8_mikw2")]
 position = Vector3(14, 0.1, 7)
 rotation = Vector3(0, 1.5708, 0)
-ai_aggro_radius = 5.0
-ai_target_path = NodePath("../Player")
+
+[node name="AIBrain" parent="DummySparring" index="0"]
+target_path = NodePath("../../Player")
+aggro_radius = 5.0
 
 [node name="CameraRig" parent="." instance=ExtResource("9_5u7bs")]
 position = Vector3(0, 1.8, 6)

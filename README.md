@@ -25,7 +25,42 @@ con personajes modelados por script en **Blender**.
 | Reaparecer | R | Back |
 | Soltar el ratón | Esc | |
 
-## Cómo funciona el ragdoll (`scripts/ragdoll/ragdoll_character.gd`)
+## Arquitectura modular (`scripts/ragdoll/`)
+
+Un personaje es un `RagdollCharacter` (núcleo) con **habilidades como nodos hijo**. El núcleo solo construye el
+cuerpo, detecta el suelo y guarda el estado compartido; cada hijo `CharacterAbility` se ejecuta en cada paso de
+física **en el orden del árbol**. Quitar un nodo = el personaje pierde esa habilidad (sin `Climb` se agarra pero
+no trepa; sin `Combat` no pega). Cada nodo expone sus parámetros en el inspector.
+
+```
+Player (RagdollCharacter)     body = data/bodies/humanoid.tres, visual_scene = character_nocto.glb
+├─ PlayerInput    controllers/player_input.gd  ← en los NPC: AIBrain (controllers/ai_brain.gd)
+├─ Knockout       fuerza muscular, KO por golpe en la cabeza, Q = flácido
+├─ StandSupport   muelle que sostiene en pie + salto
+├─ Balance        torso/pelvis erguidos, cabeza mirando a la mira
+├─ Locomotion     caminar y fase del paso
+├─ Legs           pose de piernas (paso, aire, trepar)
+├─ Combat         puñetazos
+├─ Arms           árbitro de brazos: Combat (30) > Climb (20) > Grab (10) > relajados
+├─ Climb          trepar (necesita Grab)
+└─ Grab           agarrar con cada mano
+```
+
+- **Controladores** (`PlayerInput`, `AIBrain`): solo rellenan la *intención* del personaje (`move_input`,
+  `facing_yaw`, `aim_pitch`, `want_grab`, `want_jump`, `want_limp`, `want_punch`). Para otro tipo de IA o un
+  segundo jugador basta con un controlador nuevo.
+- **Brazos**: varias habilidades quieren mover los brazos; cada una responde `arm_claim_priority(side)` y `Arms`
+  deja actuar a la de mayor prioridad (`drive_arm`).
+- **Músculos** (`ragdoll_muscles.gd`): funciones PD compartidas (`pd_toward`, `pd_aim`, `upright_torque`).
+- **Cuerpo como recurso** (`body/`): `RagdollBodyDef` con las piezas (`RagdollPartDef`: posición, masa, forma)
+  y articulaciones (`RagdollJointDef`). Para un personaje con otras proporciones, duplica
+  `data/bodies/humanoid.tres`, ajústalo y asígnalo en `body`. Los nombres de las 11 piezas son obligatorios.
+
+**Crear una habilidad nueva**: un script que `extends CharacterAbility`, sobrescribe `physics_step(delta)`
+(y opcionalmente `setup()`, `reset()`, `arm_claim_priority()`/`drive_arm()`), y se añade como hijo del
+personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `character.bodies[...]`, etc.
+
+## Cómo funciona el ragdoll
 
 - **Cuerpo 100% físico**: 11 `RigidBody3D` (pelvis, torso, cabeza, brazos, antebrazos, muslos, espinillas)
   unidos con `ConeTwistJoint3D`. No hay `AnimationPlayer` ni `CharacterBody3D`.
@@ -47,9 +82,7 @@ con personajes modelados por script en **Blender**.
   temblaban a 15–20 rad/s.
 - **Combate (Gang Beasts)**: puñetazo con impulso; un golpe fuerte en la cabeza (`knockout_speed`) deja KO
   durante `knockout_duration`: fuerza muscular = 0 → ragdoll flácido, y luego se levanta solo.
-- **NPC**: el mismo script con `player_controlled = false`. Con `ai_target_path` persigue y golpea al objetivo.
-
-Todos los parámetros (rigidez, velocidad, salto, KO…) están expuestos en el inspector.
+- **NPC**: el mismo núcleo con `AIBrain` en vez de `PlayerInput`. Con `target_path` persigue y golpea al objetivo.
 
 ## Escenario de pruebas (`scenes/levels/test_arena.tscn`)
 
@@ -63,7 +96,7 @@ Todos los parámetros (rigidez, velocidad, salto, KO…) están expuestos en el 
 
 `art_source/build_characters.py` genera los personajes con la API de Blender y los exporta a
 `assets/characters/*.glb`. Cada parte del cuerpo es un objeto separado cuyo origen coincide con el centro del
-cuerpo rígido en Godot (las dimensiones deben coincidir con `PARTS` en `ragdoll_character.gd`).
+cuerpo rígido en Godot (las dimensiones deben coincidir con `data/bodies/humanoid.tres`).
 
 ```bash
 blender -b --factory-startup --python art_source/build_characters.py

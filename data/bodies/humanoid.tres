@@ -1,0 +1,205 @@
+[gd_resource type="Resource" script_class="RagdollBodyDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/ragdoll/body/ragdoll_joint_def.gd" id="1_6kkuq"]
+[ext_resource type="Script" path="res://scripts/ragdoll/body/ragdoll_part_def.gd" id="2_wbnyw"]
+[ext_resource type="Script" path="res://scripts/ragdoll/body/ragdoll_body_def.gd" id="3_mvx4b"]
+
+[sub_resource type="Resource" id="Resource_8hxff"]
+resource_name = "pelvis_torso"
+script = ExtResource("1_6kkuq")
+parent = &"pelvis"
+child = &"torso"
+anchor = Vector3(0, 1.04, 0)
+swing_span = 0.6
+
+[sub_resource type="Resource" id="Resource_xjsio"]
+resource_name = "torso_head"
+script = ExtResource("1_6kkuq")
+parent = &"torso"
+child = &"head"
+anchor = Vector3(0, 1.5, 0)
+swing_span = 0.7
+twist_span = 0.8
+
+[sub_resource type="Resource" id="Resource_pn8x3"]
+resource_name = "torso_upper_arm_l"
+script = ExtResource("1_6kkuq")
+parent = &"torso"
+child = &"upper_arm_l"
+anchor = Vector3(-0.31, 1.46, 0)
+swing_span = 2.7
+twist_span = 0.9
+
+[sub_resource type="Resource" id="Resource_dyv2h"]
+resource_name = "upper_arm_l_lower_arm_l"
+script = ExtResource("1_6kkuq")
+parent = &"upper_arm_l"
+child = &"lower_arm_l"
+anchor = Vector3(-0.31, 1.13, 0)
+swing_span = 1.6
+twist_span = 0.4
+
+[sub_resource type="Resource" id="Resource_3gbgk"]
+resource_name = "torso_upper_arm_r"
+script = ExtResource("1_6kkuq")
+parent = &"torso"
+child = &"upper_arm_r"
+anchor = Vector3(0.31, 1.46, 0)
+swing_span = 2.7
+twist_span = 0.9
+
+[sub_resource type="Resource" id="Resource_xkpho"]
+resource_name = "upper_arm_r_lower_arm_r"
+script = ExtResource("1_6kkuq")
+parent = &"upper_arm_r"
+child = &"lower_arm_r"
+anchor = Vector3(0.31, 1.13, 0)
+swing_span = 1.6
+twist_span = 0.4
+
+[sub_resource type="Resource" id="Resource_njovv"]
+resource_name = "pelvis_thigh_l"
+script = ExtResource("1_6kkuq")
+parent = &"pelvis"
+child = &"thigh_l"
+anchor = Vector3(-0.11, 0.84, 0)
+swing_span = 1.6
+twist_span = 0.3
+
+[sub_resource type="Resource" id="Resource_he2vh"]
+resource_name = "thigh_l_shin_l"
+script = ExtResource("1_6kkuq")
+parent = &"thigh_l"
+child = &"shin_l"
+anchor = Vector3(-0.11, 0.43, 0)
+swing_span = 1.5
+twist_span = 0.2
+
+[sub_resource type="Resource" id="Resource_k1vkq"]
+resource_name = "pelvis_thigh_r"
+script = ExtResource("1_6kkuq")
+parent = &"pelvis"
+child = &"thigh_r"
+anchor = Vector3(0.11, 0.84, 0)
+swing_span = 1.6
+twist_span = 0.3
+
+[sub_resource type="Resource" id="Resource_7h5cu"]
+resource_name = "thigh_r_shin_r"
+script = ExtResource("1_6kkuq")
+parent = &"thigh_r"
+child = &"shin_r"
+anchor = Vector3(0.11, 0.43, 0)
+swing_span = 1.5
+twist_span = 0.2
+
+[sub_resource type="Resource" id="Resource_hnbpj"]
+resource_name = "pelvis"
+script = ExtResource("2_wbnyw")
+name = &"pelvis"
+position = Vector3(0, 0.92, 0)
+mass = 10.0
+shape = 0
+radius = 0.17
+height = 0.34
+
+[sub_resource type="Resource" id="Resource_t1mp7"]
+resource_name = "torso"
+script = ExtResource("2_wbnyw")
+name = &"torso"
+position = Vector3(0, 1.22, 0)
+mass = 14.0
+radius = 0.22
+height = 0.58
+
+[sub_resource type="Resource" id="Resource_kq2qv"]
+resource_name = "head"
+script = ExtResource("2_wbnyw")
+name = &"head"
+position = Vector3(0, 1.68, 0)
+mass = 4.5
+shape = 0
+radius = 0.2
+continuous_cd = true
+
+[sub_resource type="Resource" id="Resource_t176i"]
+resource_name = "upper_arm_l"
+script = ExtResource("2_wbnyw")
+name = &"upper_arm_l"
+position = Vector3(-0.31, 1.3, 0)
+mass = 2.5
+radius = 0.075
+height = 0.34
+
+[sub_resource type="Resource" id="Resource_fm4op"]
+resource_name = "lower_arm_l"
+script = ExtResource("2_wbnyw")
+name = &"lower_arm_l"
+position = Vector3(-0.31, 0.98, 0)
+mass = 2.0
+radius = 0.085
+height = 0.42
+offset = Vector3(0, -0.05, 0)
+continuous_cd = true
+
+[sub_resource type="Resource" id="Resource_ah5tv"]
+resource_name = "upper_arm_r"
+script = ExtResource("2_wbnyw")
+name = &"upper_arm_r"
+position = Vector3(0.31, 1.3, 0)
+mass = 2.5
+radius = 0.075
+height = 0.34
+
+[sub_resource type="Resource" id="Resource_o1djl"]
+resource_name = "lower_arm_r"
+script = ExtResource("2_wbnyw")
+name = &"lower_arm_r"
+position = Vector3(0.31, 0.98, 0)
+mass = 2.0
+radius = 0.085
+height = 0.42
+offset = Vector3(0, -0.05, 0)
+continuous_cd = true
+
+[sub_resource type="Resource" id="Resource_4je50"]
+resource_name = "thigh_l"
+script = ExtResource("2_wbnyw")
+name = &"thigh_l"
+position = Vector3(-0.11, 0.62, 0)
+mass = 6.0
+radius = 0.095
+
+[sub_resource type="Resource" id="Resource_km7gv"]
+resource_name = "shin_l"
+script = ExtResource("2_wbnyw")
+name = &"shin_l"
+position = Vector3(-0.11, 0.24, 0)
+mass = 4.0
+radius = 0.085
+height = 0.36
+has_foot = true
+
+[sub_resource type="Resource" id="Resource_83igm"]
+resource_name = "thigh_r"
+script = ExtResource("2_wbnyw")
+name = &"thigh_r"
+position = Vector3(0.11, 0.62, 0)
+mass = 6.0
+radius = 0.095
+
+[sub_resource type="Resource" id="Resource_alchj"]
+resource_name = "shin_r"
+script = ExtResource("2_wbnyw")
+name = &"shin_r"
+position = Vector3(0.11, 0.24, 0)
+mass = 4.0
+radius = 0.085
+height = 0.36
+has_foot = true
+
+[resource]
+resource_name = "humanoid"
+script = ExtResource("3_mvx4b")
+parts = Array[ExtResource("2_wbnyw")]([SubResource("Resource_hnbpj"), SubResource("Resource_t1mp7"), SubResource("Resource_kq2qv"), SubResource("Resource_t176i"), SubResource("Resource_fm4op"), SubResource("Resource_ah5tv"), SubResource("Resource_o1djl"), SubResource("Resource_4je50"), SubResource("Resource_km7gv"), SubResource("Resource_83igm"), SubResource("Resource_alchj")])
+joints = Array[ExtResource("1_6kkuq")]([SubResource("Resource_8hxff"), SubResource("Resource_xjsio"), SubResource("Resource_pn8x3"), SubResource("Resource_dyv2h"), SubResource("Resource_3gbgk"), SubResource("Resource_xkpho"), SubResource("Resource_njovv"), SubResource("Resource_he2vh"), SubResource("Resource_k1vkq"), SubResource("Resource_7h5cu")])

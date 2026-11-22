@@ -19,7 +19,7 @@ func _ready() -> void:
 	add_child(arena)
 	player = arena.get_node("Player")
 	cam = arena.get_node("CameraRig")
-	player._spawn_xform = Transform3D(Basis.IDENTITY, Vector3(0, 0.05, -7.3))
+	player.set_spawn(Transform3D(Basis.IDENTITY, Vector3(0, 0.05, -7.3)))
 	player.respawn()
 	_steps = [
 		# 1) levantar los brazos apuntando al borde ANTES de llegar al muro

@@ -45,7 +45,7 @@ func _ready() -> void:
 		# --- agarrar y arrastrar la caja pesada ---
 		[17.0, func():
 			var crate: Node3D = arena.get_node("Props/HeavyCrate")
-			player._spawn_xform = Transform3D(Basis.IDENTITY, crate.global_position + Vector3(0, -0.45, 1.05))
+			player.set_spawn(Transform3D(Basis.IDENTITY, crate.global_position + Vector3(0, -0.45, 1.05)))
 			player.respawn()
 			arena.get_node("CameraRig").pitch = -0.75
 			_mark = crate.global_position],

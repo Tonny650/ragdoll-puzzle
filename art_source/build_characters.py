@@ -138,7 +138,7 @@ def join_into(main, others):
 
 
 # ---------------------------------------------------------------------------
-# Definicion del cuerpo (DEBE coincidir con ragdoll_character.gd)
+# Definicion del cuerpo (DEBE coincidir con data/bodies/humanoid.tres)
 # ---------------------------------------------------------------------------
 PARTS = {
     #  nombre        centro (Godot)

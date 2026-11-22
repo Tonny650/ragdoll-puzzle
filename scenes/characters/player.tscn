@@ -2,7 +2,47 @@
 
 [ext_resource type="Script" path="res://scripts/ragdoll/ragdoll_character.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://assets/characters/character_nocto.glb" id="2_visual"]
+[ext_resource type="Script" path="res://scripts/ragdoll/controllers/player_input.gd" id="3_ctrl"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/knockout.gd" id="a0_knockout"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/stand_support.gd" id="a1_stand_support"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/balance.gd" id="a2_balance"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/locomotion.gd" id="a3_locomotion"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/legs.gd" id="a4_legs"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/combat.gd" id="a5_combat"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/arms.gd" id="a6_arms"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/climb.gd" id="a7_climb"]
+[ext_resource type="Script" path="res://scripts/ragdoll/abilities/grab.gd" id="a8_grab"]
 
 [node name="Player" type="Node3D"]
 script = ExtResource("1_script")
 visual_scene = ExtResource("2_visual")
+
+[node name="PlayerInput" type="Node" parent="."]
+script = ExtResource("3_ctrl")
+
+[node name="Knockout" type="Node" parent="."]
+script = ExtResource("a0_knockout")
+
+[node name="StandSupport" type="Node" parent="."]
+script = ExtResource("a1_stand_support")
+
+[node name="Balance" type="Node" parent="."]
+script = ExtResource("a2_balance")
+
+[node name="Locomotion" type="Node" parent="."]
+script = ExtResource("a3_locomotion")
+
+[node name="Legs" type="Node" parent="."]
+script = ExtResource("a4_legs")
+
+[node name="Combat" type="Node" parent="."]
+script = ExtResource("a5_combat")
+
+[node name="Arms" type="Node" parent="."]
+script = ExtResource("a6_arms")
+
+[node name="Climb" type="Node" parent="."]
+script = ExtResource("a7_climb")
+
+[node name="Grab" type="Node" parent="."]
+script = ExtResource("a8_grab")
