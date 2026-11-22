@@ -80,7 +80,7 @@ func join(address: String, port: int = DEFAULT_PORT) -> Error:
 
 func leave() -> void:
 	var enet := multiplayer.multiplayer_peer as ENetMultiplayerPeer
-	if enet and enet.host:
+	if enet and enet.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED and enet.host:
 		# avisar ya de la desconexion (si no, el otro lado espera al timeout de ENet)
 		for p in enet.host.get_peers():
 			p.peer_disconnect()
