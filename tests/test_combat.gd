@@ -8,7 +8,7 @@ extends Node
 ##   4. El jugador se queda quieto junto a DummySparring: la IA le noquea, y al
 ##      levantarse tiene unos segundos de gracia sin volver a caer KO.
 
-const MAX_PUNCHES := 8
+const MAX_PUNCHES := 10
 
 var arena: Node
 var player: RagdollCharacter
@@ -19,6 +19,7 @@ var t := 0.0
 var phase := 0
 var phase_t := 0.0
 var punches := 0
+var _next_punch_t := 1.0
 var _ko_count := {}
 var _recovered_at := {}
 
@@ -53,18 +54,27 @@ func _physics_process(delta: float) -> void:
 	t += delta
 	phase_t += delta
 	match phase:
-		0:  # 1. puñetazos hasta noquear a DummyIdle
+		0:  # 1. puñetazos hasta noquear a DummyIdle (persiguiendole: cada golpe le empuja)
+			var to := idle.get_head().global_position - player.get_head().global_position
+			to.y = 0.0
+			cam.yaw = atan2(-to.x, -to.z)
 			if idle.is_knocked_out():
+				Input.action_release("move_forward")
 				_assert("punches_knock_out", true, "%d golpes" % punches)
 				_next()
-			elif punches >= MAX_PUNCHES and phase_t > 1.0 + MAX_PUNCHES * 0.55 + 1.0:
-				_assert("punches_knock_out", false, "%d golpes sin KO, daño=%.2f" % [punches, _damage(idle)])
-				_finish()
-			elif phase_t > 1.0 + punches * 0.55 and punches < MAX_PUNCHES:
-				punches += 1
-				_press_punch()
-				var d := player.get_head().global_position.distance_to(idle.get_head().global_position)
-				print("METRIC t=%.2f golpe %d dist_cabezas=%.2f" % [t, punches, d])
+			elif punches >= MAX_PUNCHES:
+				if phase_t > _next_punch_t + 1.0:
+					_assert("punches_knock_out", false, "%d golpes sin KO, daño=%.2f" % [punches, _damage(idle)])
+					_finish()
+			elif to.length() > 0.85:
+				Input.action_press("move_forward")
+			else:
+				Input.action_release("move_forward")
+				if phase_t > _next_punch_t:
+					punches += 1
+					_next_punch_t = phase_t + 0.55
+					_press_punch()
+					print("METRIC t=%.2f golpe %d dist_cabezas=%.2f" % [t, punches, to.length()])
 		1:  # 2a. KO: sin fuerza y en el suelo
 			if phase_t > 1.5:
 				var c := idle.get_center()
@@ -99,8 +109,8 @@ func _physics_process(delta: float) -> void:
 			if _ko_count[player] > 0:
 				_assert("ai_knocks_out_player", true, "a los %.1f s" % phase_t)
 				_next()
-			elif phase_t > 25.0:
-				_assert("ai_knocks_out_player", false, "sin KO en 25 s, daño=%.2f" % _damage(player))
+			elif phase_t > 40.0:
+				_assert("ai_knocks_out_player", false, "sin KO en 40 s, daño=%.2f" % _damage(player))
 				_finish()
 		5:  # 4b. tras levantarse, gracia: no vuelve a caer enseguida
 			if player in _recovered_at and t > _recovered_at[player] + 1.9:

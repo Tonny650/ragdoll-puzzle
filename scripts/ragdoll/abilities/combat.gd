@@ -8,7 +8,7 @@ extends CharacterAbility
 
 const ARM_PRIORITY := 30
 
-@export var punch_impulse := 14.0
+@export var punch_impulse := 18.0
 @export var punch_duration := 0.28
 @export var arm_frequency := 32.0         ## rigidez del brazo durante el golpe (rad/s)
 @export var aim_assist_range := 1.1       ## distancia maxima (m) a la cabeza del rival para apuntarle

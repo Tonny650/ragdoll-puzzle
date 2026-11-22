@@ -85,10 +85,13 @@ personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `
   temblaban a 15–20 rad/s.
 - **Combate (Gang Beasts)**: puñetazo con impulso. Si hay un rival a tiro delante (`aim_assist_range`,
   `aim_assist_angle`), el puño apunta a su cabeza y el torso se lanza un poco hacia él (`punch_lunge`).
-  Cada puñetazo en la cabeza suma daño según su velocidad y empuja la cabeza; con `knockout_damage` acumulado
-  cae KO (el daño se cura con `damage_recovery`). Un impacto muy fuerte en la cabeza (`knockout_speed`) noquea
-  de golpe. KO = fuerza muscular 0 durante `knockout_duration` → ragdoll flácido, y luego se levanta solo, con
-  `recover_grace` segundos en los que no puede volver a caer KO. Unos 3–4 puñetazos seguidos noquean.
+  Cada puñetazo en la cabeza suma `punch_damage`, echa la cabeza y el torso hacia atrás (`punch_knockback`) y
+  afloja los músculos un instante (`stagger_time`, `stagger_strength`) para que se tambalee. Con
+  `knockout_damage` acumulado cae KO; el daño se cura solo tras `damage_recovery_delay` s sin encajar golpes.
+  Un impacto muy fuerte en la cabeza (`knockout_speed`) noquea de golpe. KO = fuerza muscular 0 durante
+  `knockout_duration` → ragdoll flácido, y luego se levanta solo, con `recover_grace` s sin poder volver a caer.
+  Cada golpe lanza chispas y un sonido seco (sintetizado en `scripts/fx/hit_fx.gd`) y, si participa el
+  jugador, sacude la cámara.
 - **NPC**: el mismo núcleo con `AIBrain` en vez de `PlayerInput`. Con `target_path` persigue al objetivo hasta
   `punch_distance` y le golpea cada `punch_cooldown` segundos.
 

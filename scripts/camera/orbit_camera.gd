@@ -19,9 +19,11 @@ var pitch := -0.2
 @onready var _arm: SpringArm3D = $SpringArm3D
 @onready var _cam: Camera3D = $SpringArm3D/Camera3D
 var _target: RagdollCharacter
+var _shake := 0.0
 
 
 func _ready() -> void:
+	add_to_group(&"orbit_camera")
 	_target = get_node_or_null(target_path) as RagdollCharacter
 	_arm.spring_length = distance
 	_arm.collision_mask = 1  # solo el mundo, no props ni ragdolls
@@ -52,6 +54,15 @@ func _process(delta: float) -> void:
 		var goal := _target.get_center() + Vector3.UP * height_offset
 		global_position = global_position.lerp(goal, 1.0 - exp(-follow_speed * delta))
 	rotation = Vector3(pitch, yaw, 0.0)
+	# sacudida de golpe
+	_shake = maxf(0.0, _shake - delta * 0.6)
+	_cam.h_offset = randf_range(-1.0, 1.0) * _shake
+	_cam.v_offset = randf_range(-1.0, 1.0) * _shake
+
+
+## Sacudir la camara (metros de desplazamiento maximo; se va calmando sola).
+func add_shake(amount: float) -> void:
+	_shake = minf(_shake + amount, 0.3)
 
 
 func get_camera() -> Camera3D:
