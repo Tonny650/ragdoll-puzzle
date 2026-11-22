@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://scenes/characters/dummy.tscn" id="8_mikw2"]
 [ext_resource type="PackedScene" path="res://scenes/camera_rig.tscn" id="9_5u7bs"]
 [ext_resource type="Script" uid="uid://d33dbav20ihp5" path="res://scripts/ui/hud.gd" id="10_fdl77"]
+[ext_resource type="Script" path="res://scripts/net/net_sync.gd" id="11_netsync"]
+[ext_resource type="Script" path="res://scripts/net/player_spawner.gd" id="12_spawner"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
 render_priority = 0
@@ -565,7 +567,7 @@ shape = SubResource("BoxShape3D_57")
 
 [node name="Mechanisms" type="Node3D" parent="."]
 
-[node name="Door" type="AnimatableBody3D" parent="Mechanisms"]
+[node name="Door" type="AnimatableBody3D" parent="Mechanisms" groups=["net_body"]]
 position = Vector3(0, 1.5, -20)
 script = ExtResource("3_sliding_door")
 
@@ -576,7 +578,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_10")
 [node name="Collision" type="CollisionShape3D" parent="Mechanisms/Door"]
 shape = SubResource("BoxShape3D_59")
 
-[node name="PressurePlate" type="Area3D" parent="Mechanisms"]
+[node name="PressurePlate" type="Area3D" parent="Mechanisms" groups=["net_state"]]
 position = Vector3(4.5, 0, -16.5)
 collision_layer = 0
 collision_mask = 4
@@ -617,7 +619,7 @@ light_color = Color(0.4, 1, 0.55, 1.0)
 light_energy = 2.0
 omni_range = 5.0
 
-[node name="Elevator" type="AnimatableBody3D" parent="Mechanisms"]
+[node name="Elevator" type="AnimatableBody3D" parent="Mechanisms" groups=["net_body"]]
 position = Vector3(-16, 0.2, -1.2)
 script = ExtResource("4_moving_platform")
 offset = Vector3(0, 3.2, 0)
@@ -630,7 +632,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_9")
 [node name="Collision" type="CollisionShape3D" parent="Mechanisms/Elevator"]
 shape = SubResource("BoxShape3D_66")
 
-[node name="Spinner" type="AnimatableBody3D" parent="Mechanisms"]
+[node name="Spinner" type="AnimatableBody3D" parent="Mechanisms" groups=["net_body"]]
 position = Vector3(13, 0.6, -14)
 script = ExtResource("5_spinner")
 
@@ -650,7 +652,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_9")
 position = Vector3(0, -0.1, 0)
 shape = SubResource("BoxShape3D_70")
 
-[node name="SeesawPlank" type="RigidBody3D" parent="Mechanisms"]
+[node name="SeesawPlank" type="RigidBody3D" parent="Mechanisms" groups=["net_body"]]
 position = Vector3(-12, 0.7, -14)
 collision_layer = 4
 collision_mask = 7
@@ -674,7 +676,7 @@ angular_limit/lower = -0.35
 
 [node name="Props" type="Node3D" parent="."]
 
-[node name="HeavyCrate" type="RigidBody3D" parent="Props"]
+[node name="HeavyCrate" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(2.5, 0.5, -6.5)
 collision_layer = 4
 collision_mask = 7
@@ -687,7 +689,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_6")
 [node name="Collision" type="CollisionShape3D" parent="Props/HeavyCrate"]
 shape = SubResource("BoxShape3D_74")
 
-[node name="Crate" type="RigidBody3D" parent="Props"]
+[node name="Crate" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(2.7, 0.26, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -700,7 +702,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate"]
 shape = SubResource("BoxShape3D_76")
 
-[node name="Crate2" type="RigidBody3D" parent="Props"]
+[node name="Crate2" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(3.3, 0.26, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -713,7 +715,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate2"]
 shape = SubResource("BoxShape3D_78")
 
-[node name="Crate3" type="RigidBody3D" parent="Props"]
+[node name="Crate3" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(3.0, 0.76, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -726,7 +728,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate3"]
 shape = SubResource("BoxShape3D_80")
 
-[node name="Crate4" type="RigidBody3D" parent="Props"]
+[node name="Crate4" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(2.7, 1.26, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -739,7 +741,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate4"]
 shape = SubResource("BoxShape3D_82")
 
-[node name="Crate5" type="RigidBody3D" parent="Props"]
+[node name="Crate5" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(3.3, 1.26, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -752,7 +754,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate5"]
 shape = SubResource("BoxShape3D_84")
 
-[node name="Crate6" type="RigidBody3D" parent="Props"]
+[node name="Crate6" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(3.0, 1.76, 2.5)
 collision_layer = 4
 collision_mask = 7
@@ -765,7 +767,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_5")
 [node name="Collision" type="CollisionShape3D" parent="Props/Crate6"]
 shape = SubResource("BoxShape3D_86")
 
-[node name="Ball" type="RigidBody3D" parent="Props"]
+[node name="Ball" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(-3.5, 0.5, 2.0)
 collision_layer = 4
 collision_mask = 7
@@ -778,7 +780,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_7")
 [node name="Collision" type="CollisionShape3D" parent="Props/Ball"]
 shape = SubResource("SphereShape3D_88")
 
-[node name="Ball2" type="RigidBody3D" parent="Props"]
+[node name="Ball2" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(-4.5, 0.4, 3.0)
 collision_layer = 4
 collision_mask = 7
@@ -791,7 +793,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_9")
 [node name="Collision" type="CollisionShape3D" parent="Props/Ball2"]
 shape = SubResource("SphereShape3D_90")
 
-[node name="Plank" type="RigidBody3D" parent="Props"]
+[node name="Plank" type="RigidBody3D" parent="Props" groups=["net_body"]]
 position = Vector3(-2.5, 0.1, -4.5)
 collision_layer = 4
 collision_mask = 7
@@ -847,6 +849,12 @@ aggro_radius = 5.0
 [node name="CameraRig" parent="." instance=ExtResource("9_5u7bs")]
 position = Vector3(0, 1.8, 6)
 target_path = NodePath("../Player")
+
+[node name="NetSync" type="Node" parent="."]
+script = ExtResource("11_netsync")
+
+[node name="PlayerSpawner" type="Node" parent="."]
+script = ExtResource("12_spawner")
 
 [connection signal="activated" from="Mechanisms/PressurePlate" to="Mechanisms/Door" method="open"]
 [connection signal="deactivated" from="Mechanisms/PressurePlate" to="Mechanisms/Door" method="close"]

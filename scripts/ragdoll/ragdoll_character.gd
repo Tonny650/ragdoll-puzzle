@@ -37,6 +37,13 @@ const DEFAULT_BODY := preload("res://data/bodies/humanoid.tres")
 @export var visual_scene: PackedScene             ## modelo con un nodo por pieza (mismo nombre)
 @export var kill_height := -25.0                  ## por debajo de esta altura reaparece
 
+# --- red ----------------------------------------------------------------------
+## Marioneta de red (en un cliente): no simula nada; sus piezas quedan congeladas
+## y las mueve NetSync con lo que manda el anfitrion. Fijar antes de añadirlo al arbol.
+var net_puppet := false
+## Es el personaje que controla la persona sentada en este PC (camara, sacudidas).
+var is_local := false
+
 # --- estado compartido (lo leen y escriben las habilidades) ------------------
 var bodies := {}                 # nombre -> RigidBody3D
 var joints: Array[Joint3D] = []
@@ -89,6 +96,20 @@ func _ready() -> void:
 			abilities.append(child)
 	for a in abilities:
 		a.setup()
+	if net_puppet:
+		_become_puppet()
+
+
+## Cliente en red: la fisica la calcula el anfitrion. Las piezas siguen
+## chocando (cinematicas) pero solo se mueven con las instantaneas de NetSync.
+func _become_puppet() -> void:
+	is_local = false
+	for a in abilities:
+		a.enabled = false
+	for rb: RigidBody3D in bodies.values():
+		rb.freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+		rb.freeze = true
+	set_physics_process(false)
 
 
 # =============================================================================
@@ -254,9 +275,15 @@ func get_ability(type: Script) -> CharacterAbility:
 	return null
 
 
+## Lo controla una persona (en este PC o en otro por red), no una IA.
 func is_player() -> bool:
+	if net_puppet:
+		return is_in_group("player")
 	var c := get_ability(PlayerInputController)
-	return c != null and c.enabled
+	if c != null and c.enabled:
+		return true
+	var n := get_ability(NetInputController)
+	return n != null and n.enabled
 
 
 # --- fachada: delega en las habilidades si existen ---------------------------

@@ -65,5 +65,13 @@ func add_shake(amount: float) -> void:
 	_shake = minf(_shake + amount, 0.3)
 
 
+## Seguir a otro personaje (en red: el propio jugador de este PC).
+func set_target(t: RagdollCharacter) -> void:
+	_target = t
+	if t:
+		global_position = t.get_center() + Vector3.UP * height_offset
+		yaw = t.facing_yaw
+
+
 func get_camera() -> Camera3D:
 	return _cam

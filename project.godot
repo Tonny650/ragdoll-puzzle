@@ -8,10 +8,14 @@
 
 config_version=5
 
+[autoload]
+
+Net="*res://scripts/net/net.gd"
+
 [application]
 
 config/name="Ragdoll Puzzle"
-run/main_scene="res://scenes/levels/test_arena.tscn"
+run/main_scene="res://scenes/ui/main_menu.tscn"
 config/description="Controlador de personaje ragdoll activo para un juego de puzles fisicos."
 config/features=PackedStringArray("4.7", "Forward Plus")
 

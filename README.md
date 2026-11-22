@@ -1,7 +1,7 @@
 # Ragdoll Puzzle
 
-Prototipo de **controlador de personaje ragdoll activo** para un juego de puzles físicos,
-inspirado en el *feeling* de Human Fall Flat y Gang Beasts. Hecho en **Godot 4.7** (GDScript, Jolt Physics)
+Prototipo de **controlador de personaje ragdoll activo** para un juego **cooperativo en línea** de puzles
+físicos, inspirado en el *feeling* de Human Fall Flat y Gang Beasts. Hecho en **Godot 4.7** (GDScript, Jolt Physics)
 con personajes modelados por script en **Blender**.
 
 ![escena de pruebas](docs/screenshot.png)
@@ -9,7 +9,39 @@ con personajes modelados por script en **Blender**.
 ## Cómo ejecutar
 
 1. Abre la carpeta con Godot 4.7+ (estándar o .NET).
-2. Pulsa **F5**: la escena principal es `scenes/levels/test_arena.tscn`.
+2. Pulsa **F5**: arranca el menú (`scenes/ui/main_menu.tscn`): **Hospedar partida**, **Unirse** (IP + puerto)
+   o **Jugar solo**. El nivel es `scenes/levels/test_arena.tscn`.
+
+Atajos por línea de comandos (tras `--`): `--host`, `--join=IP`, `--port=N`, `--solo`, y para probar con
+mala conexión `--lag=MS` (retraso añadido) y `--loss=0.05` (pérdida de paquetes). Dos ventanas en el mismo PC:
+
+```bash
+godot --path . -- --host
+godot --path . -- --join=127.0.0.1
+```
+
+## Multijugador en línea (`scripts/net/`)
+
+Modelo de **anfitrión autoritativo** (como Human Fall Flat): solo el PC que hospeda simula la física; los
+demás envían lo que quieren hacer y dibujan lo que el anfitrión les manda.
+
+- `Net` (autoload): hospedar / unirse / salir con `ENetMultiplayerPeer` (UDP, puerto 7777), hasta 4 jugadores,
+  ping, retraso y pérdida simulados. Sin sesión el juego funciona igual que en un jugador.
+- `NetIntent`: la intención de un jugador (movimiento, cámara, agarres, salto, flácido y contadores de
+  puñetazo / reaparición). `PlayerInputController.read_intent()` la lee del teclado/mando; en un cliente se
+  envía al anfitrión 60 veces/s y allí la aplica `NetInputController`.
+- `PlayerSpawner` (en el nivel): el `Player` de la escena es siempre el del anfitrión; por cada jugador que
+  entra crea `Player_<id>` en el siguiente punto libre, con etiqueta J1..J4 de su color. La cámara de cada PC
+  sigue a su propio personaje.
+- `NetSync` (en el nivel): 30 instantáneas/s con posición y rotación de todos los cuerpos (piezas de cada
+  personaje y nodos del grupo `net_body`: cajas, pelotas, balancín, puerta, ascensor, aspa). En los clientes
+  esos cuerpos están congelados y se dibujan 100 ms por detrás interpolando entre instantáneas. También
+  reparte eventos: chispas de golpes, placa de presión (`net_state`) y la meta.
+- Para que un objeto nuevo se vea igual en todos los PCs, ponlo en el grupo `net_body`. Un mecanismo con
+  estado propio va en `net_state` con `send_state_to(peer)` y un `@rpc` que lo aplique.
+- **Internet**: quien hospeda debe abrir el puerto UDP en su router, o usar una red tipo Tailscale /
+  ZeroTier / Radmin VPN. Pendiente para más adelante: Steam/relay, predicción del propio personaje,
+  reconexión, compresión.
 
 ## Controles
 
@@ -144,3 +176,12 @@ godot --headless res://tests/test_combat.tscn
 ```
 
 Imprime líneas `ASSERT ok|fail <nombre>`.
+
+Prueba de red (dos procesos en este PC, anfitrión y cliente): el cliente entra, su W mueve su personaje en
+el anfitrión y lo ve en el mismo sitio, una caja empujada llega al mismo sitio en ambos, su puñetazo llega y
+al salir desaparece. Admite mala conexión simulada:
+
+```bash
+tests/run_net_test.sh /ruta/a/godot
+tests/run_net_test.sh /ruta/a/godot --lag=150 --loss=0.05
+```

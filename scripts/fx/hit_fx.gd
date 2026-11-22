@@ -9,11 +9,20 @@ static var _rng := RandomNumberGenerator.new()  # propio: no altera el azar glob
 
 
 ## `power` 0..1 (golpe flojo .. golpe que noquea).
+## En red lo llama el anfitrion y NetSync lo repite en los clientes.
 static func punch(victim: RagdollCharacter, attacker: RagdollCharacter, pos: Vector3, dir: Vector3, power: float) -> void:
+	show(victim, attacker, pos, dir, power)
+	if NetSync.current:
+		NetSync.current.broadcast(NetSync.current, &"_fx_punch",
+			[victim.get_path(), attacker.get_path() if attacker else NodePath(), pos, dir, power])
+
+
+## Solo el efecto en este PC (chispas, sonido y, si va con el jugador local, sacudida).
+static func show(victim: RagdollCharacter, attacker: RagdollCharacter, pos: Vector3, dir: Vector3, power: float) -> void:
 	var world := victim.get_parent()
 	_spawn_sparks(world, pos, dir, power)
 	_play_sound(world, pos, power)
-	if victim.is_player() or (attacker != null and attacker.is_player()):
+	if victim.is_local or (attacker != null and attacker.is_local):
 		var cam := victim.get_tree().get_first_node_in_group(&"orbit_camera")
 		if cam and cam.has_method("add_shake"):
 			cam.add_shake(0.06 + 0.12 * power)

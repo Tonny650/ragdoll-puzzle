@@ -27,18 +27,37 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if not Net.is_authority():
+		return  # en red solo el anfitrion pesa lo que hay encima
 	var mass := 0.0
 	for b in get_overlapping_bodies():
 		if b is RigidBody3D:
 			mass += (b as RigidBody3D).mass
 	var now := mass >= required_mass
 	if now != is_active:
-		is_active = now
-		if _mat:
-			_mat.albedo_color = active_color if now else idle_color
-		if _plate:
-			_plate.position.y = _rest_y - (0.04 if now else 0.0)
+		_set_active(now)
+		if NetSync.current:
+			NetSync.current.broadcast(self, &"_net_set_active", [now])
 		if now:
 			activated.emit()
 		else:
 			deactivated.emit()
+
+
+func _set_active(now: bool) -> void:
+	is_active = now
+	if _mat:
+		_mat.albedo_color = active_color if now else idle_color
+	if _plate:
+		_plate.position.y = _rest_y - (0.04 if now else 0.0)
+
+
+# --- red: el anfitrion decide; los clientes solo cambian el aspecto ------------
+@rpc("authority", "call_remote", "reliable")
+func _net_set_active(now: bool) -> void:
+	if now != is_active:
+		_set_active(now)
+
+
+func send_state_to(peer: int) -> void:
+	Net.send(peer, self, &"_net_set_active", [is_active])
