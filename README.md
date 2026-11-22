@@ -76,8 +76,10 @@ personaje en su lugar del orden. Accede al cuerpo con `character.get_torso()`, `
   brazo ya apunta hacia la mira (así no se agarra a media pared mientras sube), y una compensación de gravedad
   evita que los brazos extendidos se cuelguen.
 - **Trepar**: agarrado a algo fijo (o muy pesado) y mirando arriba, los brazos izan el cuerpo; empujando hacia
-  delante el torso se dobla sobre el borde y la cadera pasa por encima. Ajustable con `climb_strength`,
-  `climb_min_pitch`, `climb_min_anchor_mass`.
+  delante el torso se dobla sobre el borde y la cadera pasa por encima. Al cruzar el borde las rodillas suben
+  al pecho, cadera y piernas resbalan sobre la arista y los pies que cuelgan reciben ayuda para subir. Si se
+  suelta a mitad del cruce, durante `finish_time` el personaje sigue hasta apoyar los dos pies arriba (si no,
+  quedaba sentado en la arista). Ajustable en los nodos `Climb` y `Legs`.
 - **Estabilidad**: toda amortiguación muscular se limita para no frenar más del 70 % del giro en un paso de
   física (35 % sobre el cuerpo padre). Sin ese límite, piezas de poca inercia (giro vertical de pelvis/torso)
   temblaban a 15–20 rad/s.
@@ -117,11 +119,14 @@ Los `.blend` resultantes quedan en `art_source/` (con `.gdignore` para que Godot
   borde y quedar de pie arriba.
 - `tests/test_wall_release.tscn`: saltar contra el muro alto, agarrarse por debajo del borde, soltar las manos
   sin soltar W y comprobar que cae al suelo (antes la fricción lo dejaba pegado a la pared).
+- `tests/test_mantle_release.tscn`: soltar manos y W justo al cruzar el borde y comprobar que acaba de pie
+  arriba con los dos pies apoyados.
 
 ```bash
 godot --headless res://tests/test_ragdoll.tscn
 godot --headless res://tests/test_climb.tscn
 godot --headless res://tests/test_wall_release.tscn
+godot --headless res://tests/test_mantle_release.tscn
 ```
 
 Imprime líneas `ASSERT ok|fail <nombre>`.

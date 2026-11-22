@@ -51,6 +51,7 @@ var air_time := 0.0              # segundos sin apoyo (StandSupport)
 var walk_phase := 0.0            # fase del ciclo de paso (Locomotion)
 var gait_amplitude := 0.0        # amplitud del paso 0..0.75 (Locomotion)
 var climbing := false            # colgado y trepando (Climb)
+var mantling := false            # trepando y pasando el borde: pecho por encima del agarre (Climb)
 var climb_anchor := Vector3.ZERO
 
 # --- intencion (la rellena el controlador: jugador o IA) ---------------------
@@ -330,6 +331,15 @@ func get_lower_arm(side: int) -> RigidBody3D:
 
 func get_hand_position(side: int) -> Vector3:
 	return get_lower_arm(side).global_transform * body.hand_offset
+
+
+## Centro del pie (la caja de colision del pie) de la pieza `shin_name`.
+func get_foot_position(shin_name: StringName) -> Vector3:
+	var shin: RigidBody3D = bodies[String(shin_name)]
+	for def in body.parts:
+		if def.name == shin_name:
+			return shin.global_transform * def.foot_offset
+	return shin.global_position
 
 
 func get_aim_direction() -> Vector3:
